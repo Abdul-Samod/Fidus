@@ -90,12 +90,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      logout(false);
+    };
+    window.addEventListener('fidus:logout', handleLogoutEvent);
+    return () => window.removeEventListener('fidus:logout', handleLogoutEvent);
+  }, []);
+
+  const logout = async (showToast = true) => {
+    try {
+      await authApi.logout();
+    } catch (e) {
+      console.error('Failed to logout from backend', e);
+    }
     localStorage.removeItem('fidus_token');
     localStorage.removeItem('fidus_user');
     setToken(null);
     setUser(null);
-    toast.success('Logged out successfully.');
+    if (showToast) {
+      toast.success('Logged out successfully.');
+    }
   };
 
   const updateUser = (updates: Partial<User>) => {

@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
+  withCredentials: true, // Crucial for refresh cookies
 });
 
 api.interceptors.request.use((config) => {
@@ -11,6 +12,37 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Response interceptor for handling 401s and refreshing tokens
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If 401 and we haven't already retried
+    if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url !== '/auth/refresh') {
+      originalRequest._retry = true;
+
+      try {
+        const res = await axios.get('http://localhost:5000/api/auth/refresh', {
+          withCredentials: true,
+        });
+
+        if (res.data.status === 'success') {
+          const newToken = res.data.token;
+          localStorage.setItem('fidus_token', newToken);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('Refresh token failed:', refreshError);
+        // Dispatch custom event to trigger logout in context
+        window.dispatchEvent(new Event('fidus:logout'));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Types
 export interface User {
@@ -71,6 +103,7 @@ export interface ReviewCreateData {
 export const authApi = {
   signup: (data: SignupData) => api.post('/auth/signup', data),
   login: (data: LoginData) => api.post<AuthResponse>('/auth/login', data),
+  logout: () => api.post('/auth/logout'),
 };
 
 export const kycApi = {
@@ -100,14 +133,14 @@ export const kycApi = {
 
 export const serviceApi = {
   create: (data: ServiceCreateData) => api.post('/services/create', data),
-  getOpen: () => api.get('/services/open'),
-  getMyRequests: () => api.get('/services/my-requests'),
+  getOpen: (page = 1, limit = 10) => api.get(`/services/open?page=${page}&limit=${limit}`),
+  getMyRequests: (page = 1, limit = 10) => api.get(`/services/my-requests?page=${page}&limit=${limit}`),
   complete: (jobId: string) => api.post(`/services/${jobId}/complete`),
 };
 
 export const bidApi = {
   create: (data: BidCreateData) => api.post('/bids/create', data),
-  getForJob: (jobId: string) => api.get(`/bids/${jobId}`),
+  getForJob: (jobId: string, page = 1, limit = 10) => api.get(`/bids/${jobId}?page=${page}&limit=${limit}`),
   decision: (data: { bidId: string; decision: 'Accept' | 'Counter' | 'Reject'; counterAmount?: number }) =>
     api.post('/bids/decision', data),
   artisanAccept: (data: { bidId: string }) => api.post('/bids/artisan-accept', data),

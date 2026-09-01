@@ -1,29 +1,34 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Inbox } from 'lucide-react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { serviceApi } from '../../services/api';
 import { Loader } from '../../components/ui/Loader';
 import { JobCard } from '../../components/JobCard';
 import { Button } from '../../components/ui/Button';
+import type { PaginatedResponse, ServiceRequest } from '../../types';
 
 export default function ClientDashboard() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [requests, setRequests] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const response = await serviceApi.getMyRequests();
-        setRequests(response.data?.data || response.data || []);
-      } catch (error) {
-        console.error('Failed to fetch requests', error);
-      } finally {
-        setIsLoading(false);
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery<PaginatedResponse<ServiceRequest>, Error>({
+    queryKey: ['myRequests'],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await serviceApi.getMyRequests(pageParam as number, 10);
+      return response.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.meta && lastPage.meta.page < lastPage.meta.totalPages) {
+        return lastPage.meta.page + 1;
       }
-    };
-    fetchRequests();
-  }, []);
+      return undefined;
+    }
+  });
 
   if (isLoading) {
     return (
@@ -32,6 +37,12 @@ export default function ClientDashboard() {
       </div>
     );
   }
+
+  if (isError) {
+    return <div className="text-rose">Failed to load service requests.</div>;
+  }
+
+  const requests = data?.pages.flatMap((page) => page.data) || [];
 
   return (
     <div className="space-y-6">
@@ -57,13 +68,26 @@ export default function ClientDashboard() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {requests.map((job) => (
-            <Link key={job.RequestID} to={`/client/job/${job.RequestID}`} className="block transition-transform hover:-translate-y-1">
-              <JobCard job={job} />
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {requests.map((job) => (
+              <Link key={job.RequestID} to={`/client/job/${job.RequestID}`} className="block transition-transform hover:-translate-y-1">
+                <JobCard job={job} />
+              </Link>
+            ))}
+          </div>
+          {hasNextPage && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => fetchNextPage()} 
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? 'Loading...' : 'Load More'}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

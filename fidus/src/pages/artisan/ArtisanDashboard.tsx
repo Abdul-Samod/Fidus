@@ -1,32 +1,38 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { serviceApi } from '../../services/api';
 import { JobCard } from '../../components/JobCard';
 import { Button } from '../../components/ui/Button';
 import { Loader } from '../../components/ui/Loader';
 import { RefreshCw, Search } from 'lucide-react';
+import type { PaginatedResponse, ServiceRequest } from '../../types';
 
 export default function ArtisanDashboard() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchJobs = async () => {
-    setLoading(true);
-    try {
-      const response = await serviceApi.getOpen();
-      const data = response.data?.data || response.data || [];
-      setJobs(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error);
-    } finally {
-      setLoading(false);
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isFetching
+  } = useInfiniteQuery<PaginatedResponse<ServiceRequest>, Error>({
+    queryKey: ['openJobs'],
+    queryFn: async ({ pageParam = 1 }) => {
+      const response = await serviceApi.getOpen(pageParam as number, 10);
+      return response.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.meta && lastPage.meta.page < lastPage.meta.totalPages) {
+        return lastPage.meta.page + 1;
+      }
+      return undefined;
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  const jobs = data?.pages.flatMap((page) => page.data) || [];
 
   return (
     <div className="space-y-6">
@@ -37,18 +43,20 @@ export default function ArtisanDashboard() {
         </div>
         <Button 
           variant="outline" 
-          onClick={fetchJobs} 
-          disabled={loading}
+          onClick={() => refetch()} 
+          disabled={isFetching}
         >
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <Loader />
         </div>
+      ) : isError ? (
+        <div className="text-rose">Failed to load open jobs.</div>
       ) : jobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center bg-surface border border-border rounded-xl">
           <Search className="w-12 h-12 text-text-muted mb-4" />
@@ -65,6 +73,17 @@ export default function ArtisanDashboard() {
               </Link>
             ))}
           </div>
+          {hasNextPage && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => fetchNextPage()} 
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? 'Loading...' : 'Load More'}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>

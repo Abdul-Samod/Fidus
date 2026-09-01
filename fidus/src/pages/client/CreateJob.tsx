@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { serviceApi } from '../../services/api';
@@ -9,7 +10,7 @@ import { Card } from '../../components/ui/Card';
 
 export default function CreateJob() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     Title: '',
     Description: '',
@@ -20,6 +21,19 @@ export default function CreateJob() {
 
   const TITLE_MAX = 100;
   const DESC_MAX = 1000;
+
+  const createJobMutation = useMutation({
+    mutationFn: (data: any) => serviceApi.create(data),
+    onSuccess: () => {
+      toast.success('Job posted successfully!');
+      queryClient.invalidateQueries({ queryKey: ['myRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['openJobs'] });
+      navigate('/client');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to create job');
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,19 +50,10 @@ export default function CreateJob() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      await serviceApi.create({
-        ...formData,
-        PriceRange: `${minPrice} - ${maxPrice}`
-      });
-      toast.success('Job posted successfully!');
-      navigate('/client');
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create job');
-    } finally {
-      setIsLoading(false);
-    }
+    createJobMutation.mutate({
+      ...formData,
+      PriceRange: `${minPrice} - ${maxPrice}`
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -150,9 +155,9 @@ export default function CreateJob() {
           <Button
             type="submit"
             className="w-full bg-trust-blue hover:bg-blue-600 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all"
-            disabled={isLoading || formData.Title.length > TITLE_MAX || formData.Description.length > DESC_MAX}
+            disabled={createJobMutation.isPending || formData.Title.length > TITLE_MAX || formData.Description.length > DESC_MAX}
           >
-            {isLoading ? 'Posting...' : 'Post Job'}
+            {createJobMutation.isPending ? 'Posting...' : 'Post Job'}
           </Button>
         </form>
       </Card>
