@@ -79,7 +79,7 @@ export default function PaymentPage() {
     if (!bid) return;
     
     const handler = window.PaystackPop.setup({
-      key: 'pk_test_4304a1eccf7d91350fff46c344e2a5d8c51966be',
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_4304a1eccf7d91350fff46c344e2a5d8c51966be',
       email: `${user?.uuid}@fidus.com`,
       amount: Number(bid.ProposedPrice) * 100, // NGN in kobo
       currency: 'NGN',
