@@ -24,7 +24,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const res = await axios.get('http://localhost:5000/api/auth/refresh', {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/refresh`, {
           withCredentials: true,
         });
 
