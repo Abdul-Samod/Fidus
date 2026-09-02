@@ -4,7 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 import { ImageModal } from '../ui/ImageModal';
 
-export const Navbar: React.FC = () => {
+import { Menu } from 'lucide-react';
+
+export interface NavbarProps {
+  onMenuClick?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
@@ -16,10 +22,21 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="w-full bg-surface border-b border-border h-16 flex items-center justify-between px-6 z-40 sticky top-0">
-        <Link to="/" className="text-2xl font-heading font-bold text-trust-blue hover:opacity-90 transition-opacity">
-          Fidus
-        </Link>
+      <nav className="w-full bg-surface border-b border-border h-16 flex items-center justify-between px-4 md:px-6 z-40 sticky top-0 shrink-0">
+        <div className="flex items-center gap-3">
+          {user && (
+            <button 
+              onClick={onMenuClick}
+              className="md:hidden p-2 text-text-secondary hover:text-white rounded-lg hover:bg-border transition-colors"
+              aria-label="Toggle Menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          )}
+          <Link to="/" className="text-2xl font-heading font-bold text-trust-blue hover:opacity-90 transition-opacity">
+            Fidus
+          </Link>
+        </div>
         
         <div className="flex items-center space-x-4">
           {user ? (
