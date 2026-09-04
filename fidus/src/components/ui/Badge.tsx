@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type BadgeVariant = 'open' | 'assigned' | 'completed' | 'pending' | 'funded' | 'released' | 'disputed' | 'accepted' | 'counter_offered' | 'rejected';
+export type BadgeVariant = 'open' | 'assigned' | 'completed' | 'pending' | 'funded' | 'released' | 'disputed' | 'accepted' | 'counter_offered' | 'rejected' | 'verified' | 'unverified';
 
 export interface BadgeProps {
   variant: BadgeVariant;
@@ -19,6 +19,8 @@ export const Badge: React.FC<BadgeProps> = ({ variant, className = '' }) => {
     accepted: { bg: 'bg-emerald/10', text: 'text-emerald', label: 'Accepted' },
     counter_offered: { bg: 'bg-amber/10', text: 'text-amber', label: 'Counter Offered' },
     rejected: { bg: 'bg-rose/10', text: 'text-rose', label: 'Rejected' },
+    verified: { bg: 'bg-emerald/10', text: 'text-emerald', label: 'Verified' },
+    unverified: { bg: 'bg-amber/10', text: 'text-amber', label: 'Unverified' },
   };
 
   const { bg, text, label } = variantMap[variant];

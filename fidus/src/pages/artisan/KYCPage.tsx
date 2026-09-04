@@ -56,7 +56,7 @@ export default function KYCPage() {
     );
   }
 
-  const verifiedVariant: BadgeVariant = status?.KYC_Verified ? 'accepted' : 'rejected';
+  const verifiedVariant: BadgeVariant = status?.KYC_Verified ? 'verified' : 'unverified';
 
   return (
     <div className="space-y-8">

@@ -1,13 +1,29 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { serviceApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { JobCard } from '../../components/JobCard';
 import { Button } from '../../components/ui/Button';
 import { Loader } from '../../components/ui/Loader';
+import { Modal } from '../../components/ui/Modal';
 import { RefreshCw, Search } from 'lucide-react';
 import type { PaginatedResponse, ServiceRequest } from '../../types';
 
 export default function ArtisanDashboard() {
+  const { user } = useAuth();
+  
+  const [showKycModal, setShowKycModal] = useState(() => {
+    if (user && !user.KYC_Verified && !sessionStorage.getItem('kyc_prompt_shown')) {
+      return true;
+    }
+    return false;
+  });
+
+  const handleCloseKycModal = () => {
+    sessionStorage.setItem('kyc_prompt_shown', 'true');
+    setShowKycModal(false);
+  };
   const {
     data,
     isLoading,
@@ -86,6 +102,39 @@ export default function ArtisanDashboard() {
           )}
         </>
       )}
+
+      <Modal
+        isOpen={showKycModal}
+        onClose={handleCloseKycModal}
+        title="Welcome to Fidus!"
+      >
+        <div className="space-y-4">
+          <p>
+            We noticed you haven't completed your Identity Verification (KYC) yet.
+          </p>
+          <p>
+            <strong>Why is this important?</strong>
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>It unlocks your <strong>Trust Score (WTA)</strong>.</li>
+            <li>Clients are heavily encouraged to hire only verified artisans.</li>
+            <li>It prevents platform fraud and keeps the community safe.</li>
+          </ul>
+          <p>
+            Get verified now to boost your visibility and access better paying jobs!
+          </p>
+          <div className="pt-4 flex justify-end gap-3">
+            <Button variant="ghost" onClick={handleCloseKycModal}>
+              Maybe Later
+            </Button>
+            <Link to="/artisan/kyc" onClick={handleCloseKycModal}>
+              <Button variant="primary">
+                Verify Identity Now
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
