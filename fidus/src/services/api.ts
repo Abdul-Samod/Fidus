@@ -48,7 +48,10 @@ api.interceptors.response.use(
 export interface User {
   uuid: string;
   fullName: string;
+  email: string;
   role: 'Client' | 'Artisan';
+  KYC_Verified?: boolean;
+  WTA_Score?: number;
   profilePicUrl?: string;
 }
 
